@@ -1,0 +1,23 @@
+{
+  "name": "g5li/swoole-stubs-generator",
+  "keywords": [
+    "swoole",
+    "stubs",
+    "ide-helper"
+  ],
+  "type": "project",
+  "description": "generate stubs for swoole",
+  "autoload": {
+    "psr-4": {
+      "App\\": "src/"
+    }
+  },
+  "require": {
+    "php": "~7.0",
+    "ext-swoole": "~4.0",
+    "zendframework/zend-code": "^3.3"
+  },
+  "scripts": {
+    "generate": "App\\Generator::exec"
+  }
+}

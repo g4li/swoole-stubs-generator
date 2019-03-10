@@ -1,0 +1,4 @@
+/vendor/
+/stubs/
+/swoole-src/
+composer.lock
