@@ -13,7 +13,7 @@
     }
   },
   "require": {
-    "php": "~7.0",
+    "php": "~7.3",
     "ext-swoole": "~4.0",
     "zendframework/zend-code": "^3.3"
   },

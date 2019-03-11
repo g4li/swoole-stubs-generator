@@ -3,6 +3,12 @@
 
 namespace App;
 
+use App\Swoole\FunctionMethod;
+use ReflectionClass;
+use ReflectionExtension;
+use ReflectionFunction;
+use Traversable;
+use function var_export;
 use Zend\Code\Generator\ClassGenerator;
 use Zend\Code\Generator\DocBlock\Tag\GenericTag;
 use Zend\Code\Generator\DocBlockGenerator;
@@ -17,11 +23,15 @@ use Zend\Code\Reflection\FunctionReflection;
 class Generator
 {
 
+    public static $analyzer = null;
+
     public static function exec()
     {
-
         defined("OUTPUT_DIR") || define("OUTPUT_DIR", __DIR__ . '/../stubs');
 
+        defined("SWOOLE_SRC") || define("SWOOLE_SRC", __DIR__ . '/../swoole-src');
+
+        self::$analyzer = new Analyzer(SWOOLE_SRC);
         self::constants();
         self::classes();
         self::functions();
@@ -29,10 +39,10 @@ class Generator
 
     public static function constants()
     {
-        $ref = new \ReflectionExtension('Swoole');
+        $ref = new ReflectionExtension('Swoole');
         $output = '';
         foreach ($ref->getConstants() as $constant => $value) {
-            $output .= sprintf('define("%s", %s);' . PHP_EOL, $constant, \var_export($value, true));
+            $output .= sprintf('define("%s", %s);' . PHP_EOL, $constant, var_export($value, true));
         }
 
         self::writeFile($output, OUTPUT_DIR . '/constants.php');
@@ -40,7 +50,7 @@ class Generator
 
     public static function classes()
     {
-        $ref = new \ReflectionExtension('Swoole');
+        $ref = new ReflectionExtension('Swoole');
 
         foreach ($ref->getClasses() as $class) {
             $reflection = new ClassReflection($class->getName());
@@ -49,9 +59,9 @@ class Generator
             $docBlock = new DocBlockGenerator();
             $classGenerator->setDocBlock($docBlock);
 
-            if ($classGenerator->hasImplementedInterface(\Traversable::class)) {
+            if ($classGenerator->hasImplementedInterface(Traversable::class)) {
                 // 去掉重复的 interface
-                $classGenerator->removeImplementedInterface(\Traversable::class);
+                $classGenerator->removeImplementedInterface(Traversable::class);
             }
 
             // private 是不需要显示的, public 都是只读的，protected 是稀少而有可能被读写的
@@ -63,8 +73,8 @@ class Generator
                 }
             }
 
-            $linkTag = self::linkTag($class->getShortName());
-            if(!empty($linkTag)) {
+            $linkTag = self::linkTag(str_replace('Swoole\\', '', $class->getName()));
+            if (!empty($linkTag)) {
                 $docBlock->setTag($linkTag);
             }
 
@@ -90,7 +100,7 @@ class Generator
 
     public static function functions()
     {
-        $ref = new \ReflectionExtension('Swoole');
+        $ref = new ReflectionExtension('Swoole');
         $output = '';
         foreach ($ref->getFunctions() as $function) {
             $functionGenerator = new MethodGenerator($function->getName());
@@ -123,7 +133,7 @@ class Generator
 
     private static function callable(MethodGenerator $callableGenerator, $reflection = null)
     {
-        if ($reflection instanceof \ReflectionFunction) {
+        if ($reflection instanceof ReflectionFunction) {
             $linkTag = self::linkTag($callableGenerator->getName());
 
             // 初始化 函数 的参数
@@ -135,12 +145,14 @@ class Generator
                     $callableGenerator->setParameter($parameterGenerator);
                 }
             }
+            $analyzer_parameter_index = $callableGenerator->getName();
         } else {
-            /** @var \ReflectionClass $reflection */
+            /** @var ReflectionClass $reflection */
             $linkTag = self::linkTag(str_replace('Swoole\\', '', $reflection->getName()) . '->' . $callableGenerator->getName())
                 ?? self::linkTag(
                     str_replace('\\', '_', $reflection->getName()) . '->' . $callableGenerator->getName()
                 );
+            $analyzer_parameter_index = $reflection->getName() . '::' . $callableGenerator->getName();
         }
 
         $tags = [];
@@ -148,7 +160,25 @@ class Generator
             $tags[] = $linkTag;
         }
 
-        // @todo 参数的默认值和数据类型
+        $analyzerParameters = FunctionMethod::getInnerParameters($analyzer_parameter_index);
+        $parameters = $callableGenerator->getParameters();
+
+        /** @var ParameterGenerator $analyzerParameter */
+        foreach ($analyzerParameters as $analyzerParameter) {
+            $parameter_name = $analyzerParameter->getName();
+
+            if(array_key_exists($parameter_name, $parameters)) {
+                $parameter = $parameters[$parameter_name];
+                if($analyzerParameter->getType()) {
+                    $parameter->setType($analyzerParameter->getType());
+                }
+                if($analyzerParameter->getDefaultValue()) {
+                    $parameter->setDefaultValue($analyzerParameter->getDefaultValue());
+                }
+            } else {
+                $callableGenerator->setParameter($analyzerParameter);
+            }
+        }
 
         if (!empty($tags)) {
             $docBlock = new DocBlockGenerator();
