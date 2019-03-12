@@ -128,17 +128,31 @@ class FunctionMethod implements LineAnalyzer
         }
         self::$innerParameters[$temp][] = $parameter;
 
-        if ($optional && self::hasAssignedValue($inner_name)) {
+        if ($optional && $parameter->getType() && self::hasAssignedValue($inner_name)) {
+            // 可选参数，已知数据类型，有默认值，设置默认值
             $value = self::getAssignedValue($inner_name);
             $constant_name = ConstantRegister::getNamedConstant($value);
             if ($constant_name) {
+                // 已定义的 PHP 常量
                 $type = ValueGenerator::TYPE_CONSTANT;
                 $value = $constant_name;
-            } elseif (!empty($parameter->getType())) {
-                $type = (string)$parameter->getType();
-                settype($value, $type);
             } else {
-                $type = ValueGenerator::TYPE_AUTO;
+                $type = (string)$parameter->getType();
+                $numeric_types = [
+                    ValueGenerator::TYPE_INT,
+                    ValueGenerator::TYPE_INTEGER,
+                    ValueGenerator::TYPE_FLOAT,
+                    ValueGenerator::TYPE_DOUBLE,
+                    ValueGenerator::TYPE_NUMBER,
+                ];
+                if (in_array($type, $numeric_types) && !is_numeric($value)) {
+                    // 数据类型为 数字，但赋值的 value 不是数字，应当是 c 常量。默认值改为 null，而不是 0，避免歧义
+                    $value = null;
+                    $type = ValueGenerator::TYPE_NULL;
+                } else {
+                    // 普通的默认值
+                    settype($value, $type);
+                }
             }
             $defaultValue = new ValueGenerator($value, $type);
             $parameter->setDefaultValue($defaultValue);
