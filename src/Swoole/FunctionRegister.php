@@ -25,6 +25,11 @@ class FunctionRegister implements LineAnalyzer
         }
 
         $function_name = $matches[1];
+        if (strncmp($function_name, '_', 1) === 0) {
+            // _ 起始的函数使用了 PHP_METHOD 语法却并未在扩展中
+            return true;
+        }
+
         try {
             $currentFunction = new ReflectionFunction($function_name);
         } catch (Throwable $exception) {
@@ -35,5 +40,13 @@ class FunctionRegister implements LineAnalyzer
 
         self::$currentFunction = $currentFunction;
         return true;
+    }
+
+    /**
+     * @return string[]
+     */
+    public static function getNotFound(): array
+    {
+        return self::$notFound;
     }
 }

@@ -18,7 +18,7 @@ class ClassRegister implements LineAnalyzer
     private static $module_classes = [];
 
     /** @var string[] */
-    private static $class_alias = [];
+    private static $class_aliases = [];
 
     /** @var string[] */
     private static $notFound = [];
@@ -40,7 +40,7 @@ class ClassRegister implements LineAnalyzer
             $module = $matches[1];
             $temp = explode('\\\\', trim($matches[2], '" '));
             $class_name = array_pop($temp);
-            $alias = array_slice($matches, 3, 2);
+            $aliases = array_slice($matches, 3, 2);
         } else {
             throw new Exception('class pattern error, code=' . $line);
         }
@@ -62,10 +62,10 @@ class ClassRegister implements LineAnalyzer
         self::$classes[$namespace_name] = $class;
         self::$module_classes[$module] = $class;
 
-        foreach ($alias as $value) {
+        foreach ($aliases as $value) {
             if ($value !== 'NULL') {
                 $alias = str_replace('\\\\', '\\', trim($value, '"'));
-                self::$class_alias[$alias] = $namespace_name;
+                self::$class_aliases[$alias] = $namespace_name;
             }
         }
         return true;
@@ -89,5 +89,21 @@ class ClassRegister implements LineAnalyzer
     public static function getClassByName(string $name): ReflectionClass
     {
         return self::$classes[$name];
+    }
+
+    /**
+     * @return string[]
+     */
+    public static function getClassAliases(): array
+    {
+        return self::$class_aliases;
+    }
+
+    /**
+     * @return string[]
+     */
+    public static function getNotFound(): array
+    {
+        return self::$notFound;
     }
 }

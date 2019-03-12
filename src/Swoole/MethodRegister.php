@@ -31,7 +31,7 @@ class MethodRegister implements LineAnalyzer
         $method_name = $matches[2];
 
         if (!ClassRegister::hasClassByModule($module_name)) {
-            // @todo module not found in analyzer
+            // @todo module not found in analyzer. Exception?
             return false;
         }
         $class = ClassRegister::getClassByModule($module_name);
@@ -48,5 +48,13 @@ class MethodRegister implements LineAnalyzer
         self::$documentedMethods[$class_identify] = $currentMethod;
         self::$currentMethod = $currentMethod;
         return true;
+    }
+
+    /**
+     * @return string[]
+     */
+    public static function getNotFound(): array
+    {
+        return self::$notFound;
     }
 }

@@ -3,7 +3,10 @@
 
 namespace App;
 
+use App\Swoole\ClassRegister;
 use App\Swoole\FunctionMethod;
+use App\Swoole\FunctionRegister;
+use App\Swoole\MethodRegister;
 use ReflectionClass;
 use ReflectionExtension;
 use ReflectionFunction;
@@ -23,6 +26,7 @@ use Zend\Code\Reflection\FunctionReflection;
 class Generator
 {
 
+    /** @var Analyzer */
     public static $analyzer = null;
 
     public static function exec()
@@ -34,7 +38,10 @@ class Generator
         self::$analyzer = new Analyzer(SWOOLE_SRC);
         self::constants();
         self::classes();
+        self::classAliases();
         self::functions();
+
+        self::notFound();
     }
 
     public static function constants()
@@ -96,6 +103,21 @@ class Generator
 
             $fileGenerator->write();
         }
+    }
+
+    public static function classAliases()
+    {
+        $output = '';
+        foreach (ClassRegister::getClassAliases() as $alias => $namespace_name) {
+            if (class_exists($alias)) {
+                $output .= sprintf('class_alias(%s::class, "%s");' . PHP_EOL, $namespace_name, $alias);
+            }
+        }
+
+        $file = new FileGenerator();
+        $file->setBody($output);
+        $file->setFilename(OUTPUT_DIR . '/aliases.php');
+        $file->write();
     }
 
     public static function functions()
@@ -167,12 +189,12 @@ class Generator
         foreach ($analyzerParameters as $analyzerParameter) {
             $parameter_name = $analyzerParameter->getName();
 
-            if(array_key_exists($parameter_name, $parameters)) {
+            if (array_key_exists($parameter_name, $parameters)) {
                 $parameter = $parameters[$parameter_name];
-                if($analyzerParameter->getType()) {
+                if ($analyzerParameter->getType()) {
                     $parameter->setType($analyzerParameter->getType());
                 }
-                if($analyzerParameter->getDefaultValue()) {
+                if ($analyzerParameter->getDefaultValue()) {
                     $parameter->setDefaultValue($analyzerParameter->getDefaultValue());
                 }
             } else {
@@ -205,6 +227,39 @@ class Generator
 
         $link = 'https://github.com/swoole/swoole-wiki/blob/master/doc/' . rawurlencode($matches[1]);
         return new GenericTag('link', $link);
+    }
+
+    private static function notFound()
+    {
+
+        $output = '';
+
+        foreach (
+            [
+                'classes' => ClassRegister::class,
+                'methods' => MethodRegister::class,
+                'functions' => FunctionRegister::class,
+            ] as $type => $class_name) {
+            $values = call_user_func([$class_name, 'getNotFound']);
+
+            if (count($values) == 0) {
+                continue;
+            }
+
+            $output .= sprintf('%d %s not found in installed extension' . PHP_EOL, count($values), $type);
+            foreach ($values as $value) {
+                $output .= "\t" . $value . PHP_EOL;
+            }
+            $output .= PHP_EOL;
+        }
+
+        $log_file = OUTPUT_DIR . '/not-found.txt';
+        $fp = fopen($log_file, 'w+');
+        ftruncate($fp, 0);
+
+        fwrite($fp, $output);
+
+        fclose($fp);
     }
 }
 
