@@ -170,10 +170,14 @@ class Generator
             $analyzer_parameter_index = $callableGenerator->getName();
         } else {
             /** @var ReflectionClass $reflection */
-            $linkTag = self::linkTag(str_replace('Swoole\\', '', $reflection->getName()) . '->' . $callableGenerator->getName())
-                ?? self::linkTag(
-                    str_replace('\\', '_', $reflection->getName()) . '->' . $callableGenerator->getName()
-                );
+            $connector = $callableGenerator->isStatic() ? '::' : '->';
+            $wiki_names = [
+                str_replace('Swoole\\', '', $reflection->getName()) . $connector . $callableGenerator->getName(),
+                str_replace('\\', '_', $reflection->getName()) . $connector . $callableGenerator->getName(),
+            ];
+            do {
+                $linkTag = self::linkTag(array_shift($wiki_names));
+            } while(is_null($linkTag) && !empty($wiki_names));
             $analyzer_parameter_index = $reflection->getName() . '::' . $callableGenerator->getName();
         }
 
