@@ -21,6 +21,9 @@ class ClassRegister implements LineAnalyzer
     private static $class_aliases = [];
 
     /** @var string[] */
+    private static $class_method = [];
+
+        /** @var string[] */
     private static $notFound = [];
 
     /**
@@ -36,12 +39,15 @@ class ClassRegister implements LineAnalyzer
         }
 
         // swoole 4.2
-        if (preg_match('/SWOOLE_INIT_CLASS_ENTRY[A-Z\_]*\(([a-zA-Z0-9\_]+), "([a-zA-Z0-9\\\\]+)", (["a-zA-Z0-9\_\\\\]+), (["a-zA-Z0-9\_\\\\]+),/', $line, $matches)) {
+        // SWOOLE_INIT_CLASS_ENTRY(swoole_timer, "Swoole\\Timer", "swoole_timer", NULL, swoole_timer_methods);
+        if (preg_match('/SWOOLE_INIT_CLASS_ENTRY[A-Z\_]*\(([a-zA-Z0-9\_]+), "([a-zA-Z0-9\\\\]+)", (["a-zA-Z0-9\_\\\\]+), (["a-zA-Z0-9\_\\\\]+),[\s]*(.*?(?=\)))/', $line, $matches)) {
             $module = $matches[1];
             $temp = explode('\\\\', trim($matches[2], '" '));
             $class_name = array_pop($temp);
             $aliases = array_slice($matches, 3, 2);
+            $methods = $matches[5];
         } else {
+            // todo swoole 4.0, 4.1, 4.3
             throw new Exception('class pattern error, code=' . $line);
         }
 
@@ -61,6 +67,7 @@ class ClassRegister implements LineAnalyzer
 
         self::$classes[$namespace_name] = $class;
         self::$module_classes[$module] = $class;
+        self::$class_method[$namespace_name] = $methods;
 
         foreach ($aliases as $value) {
             if ($value !== 'NULL') {
@@ -105,5 +112,10 @@ class ClassRegister implements LineAnalyzer
     public static function getNotFound(): array
     {
         return self::$notFound;
+    }
+
+    public static function getClassMethod(string $name): string
+    {
+        return self::$class_method[$name];
     }
 }

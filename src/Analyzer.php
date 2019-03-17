@@ -2,6 +2,7 @@
 
 namespace App;
 
+use App\Swoole\MethodAliasRegister;
 use App\Swoole\FunctionMethod;
 use App\Swoole\ClassRegister;
 use App\Swoole\ConstantRegister;
@@ -37,6 +38,10 @@ class Analyzer
             }
 
             if (ConstantRegister::matching($line)) {
+                continue;
+            }
+
+            if (MethodAliasRegister::matching($line)) {
                 continue;
             }
         }

@@ -4,6 +4,7 @@
 namespace App;
 
 use App\Swoole\ClassRegister;
+use App\Swoole\MethodAliasRegister;
 use App\Swoole\FunctionMethod;
 use App\Swoole\FunctionRegister;
 use App\Swoole\MethodRegister;
@@ -90,6 +91,20 @@ class Generator
                     $classGenerator->removeMethod($method->getName());
                 }
                 self::callable($method, $class);
+
+                $class_method = ClassRegister::getClassMethod($class->getName());
+                if (MethodAliasRegister::isFunctionAlias($class_method, $method->getName())) {
+                    // 该方法为某函数的别名，通过代码声明，不去获取该方法的参数类型
+                    $function_name = MethodAliasRegister::getFunctionAlias($class_method, $method->getName());
+                    $method->setBody(sprintf('return call_user_func_array("%s", func_get_args());', $function_name));
+                }
+
+                if (MethodAliasRegister::isMethodAlias($class_method, $method->getName())) {
+                    // 该方法为某函数的别名，通过代码声明，不去获取该方法的参数类型
+                    $function_name = MethodAliasRegister::getMethodAlias($class_method, $method->getName());
+                    $method->setBody(sprintf('return call_user_func_array([$this, "%s"], func_get_args());', $function_name));
+                }
+
             }
 
             $fileGenerator = new FileGenerator();
