@@ -23,7 +23,7 @@ class MethodRegister implements LineAnalyzer
     public static function matching(string $line): bool
     {
         // PHP_METHOD(swoole_server, __construct)
-        if (!preg_match('/^static PHP_METHOD\(([a-zA-Z\_]+), (.*)\)$/', $line, $matches)) {
+        if (!preg_match('/PHP_METHOD\(([a-zA-Z\_]+), (.*)\)$/', $line, $matches)) {
             return false;
         }
 

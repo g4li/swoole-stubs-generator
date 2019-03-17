@@ -20,7 +20,7 @@ class FunctionRegister implements LineAnalyzer
     public static function matching(string $line): bool
     {
         // PHP_FUNCTION(swoole_timer_tick)
-        if (!preg_match('/^static PHP_FUNCTION\((.*)\)$/', $line, $matches)) {
+        if (!preg_match('/PHP_FUNCTION\((.*)\)$/', $line, $matches)) {
             return false;
         }
 
