@@ -42,6 +42,7 @@ class MethodRegister implements LineAnalyzer
         } catch (ReflectionException $exception) {
             // @todo method is not fund in installed extension
             self::$notFound[] = $class_identify;
+            // @todo return true will cause an exception
             return true;
         }
 

@@ -35,6 +35,7 @@ class FunctionRegister implements LineAnalyzer
         } catch (Throwable $exception) {
             // @todo function is not fund in installed extension
             self::$notFound[] = $function_name;
+            // @todo return true will cause an exception
             return true;
         }
 
